@@ -1,0 +1,33 @@
+[
+  {
+    "sku": "24692090982",
+    "propsDeal": ["de_qual_pais_e_o_antecedente_penal_"]
+  },
+  {
+    "sku": "24662242337", 
+    "propsDeal": [
+      "qual_documento_sera_emitido_",
+      "se_for_para_lmd__informar_qual_o_consulado_de_apresentacao_"
+    ]
+  },
+  {
+    "sku": "24662242335",
+    "propsDeal": ["em_qual_pais_sera_feito_o_registro_"]
+  },
+  {
+    "sku": "24692245591",
+    "propsDeal": ["ensino_medio_finalizado_"]
+  },
+  {
+    "sku": "24657435405",
+    "propsDeal": ["qual_desses_e_o_servico_"]
+  },
+  {
+    "sku": "24664984750",
+    "propsDeal": ["formato_digital_ou_fisico", "com_ou_sem_pagina_adicional"]
+  },
+  {
+    "sku": "24666686901",
+    "propsDeal": ["em_qual_pais_sera_feita_a_homologacao"]
+  }
+]

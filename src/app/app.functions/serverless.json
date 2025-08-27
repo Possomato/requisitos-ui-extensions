@@ -1,0 +1,12 @@
+{
+  "appFunctions": {
+    "get-data": {
+      "file": "get-data.js",
+      "secrets": []
+    },
+    "update-deal-properties": {
+      "file": "update-deal-properties.js",
+      "secrets": []
+    }
+  }
+}

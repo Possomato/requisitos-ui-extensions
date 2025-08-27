@@ -1,0 +1,21 @@
+{
+  "name": "Line Items summary example app",
+  "description": "Line Items summary example app", 
+  "uid": "line_items_summary_example_app",
+  "scopes": [
+    "crm.objects.deals.read",
+    "crm.objects.deals.write",
+    "crm.objects.line_items.read",
+    "crm.schemas.deals.read"
+  ],
+  "public": false,
+  "extensions": {
+    "crm": {
+      "cards": [
+        {
+          "file": "extensions/line-items-summary-card.json"
+        }
+      ]
+    }
+  }
+}
