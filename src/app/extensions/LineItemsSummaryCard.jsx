@@ -296,13 +296,13 @@ const RequirementsCard = () => {
   return (
     <Flex direction="column" gap="xl">
       {matchedProducts.map((product, index) => (
-        <Flex key={index} direction="column" gap="md">
+        <Flex key={index} direction="column" gap="sm">
           {/* TÍTULO DO PRODUTO - ESTILIZADO */}
           <Text format={{ fontWeight: 'demibold', fontSize: 'medium' }}>
             {product.productName}
           </Text>
           
-          <Flex direction="column" gap="lg">
+          <Flex direction="column" gap="sm">
             {product.properties.map((prop, propIndex) => (
               <Flex key={propIndex} direction="column" gap="sm">
                 {/* LABEL DA PROPRIEDADE - USANDO O LABEL ORIGINAL DO HUBSPOT */}
