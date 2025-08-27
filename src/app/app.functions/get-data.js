@@ -1,171 +1,152 @@
 // For HubSpot API calls
 const hubspot = require('@hubspot/api-client');
-const fs = require('fs');
-const path = require('path');
 
 // Entry function of this module
 exports.main = async (context = {}) => {
   const { hs_object_id } = context.propertiesToSend;
   
-  console.log('Deal ID:', hs_object_id);
+  console.log('🚀 === STARTING get-data function ===');
+  console.log('📋 Deal ID:', hs_object_id);
   
   try {
     // 1. Buscar line items
+    console.log('🔍 Step 1: Fetching line items...');
     const lineItems = await getLineItems(hs_object_id);
-    console.log('Line items found:', lineItems.length);
+    console.log(`📊 Line items found: ${lineItems.length}`);
     
-    // 2. Carregar requirements de TODOS os arquivos JSON
-    const requirements = loadRequirements();
-    console.log('Requirements loaded:', requirements.length);
+    // 2. Carregar requirements do GITHUB
+    console.log('🔍 Step 2: Loading requirements from GitHub...');
+    const requirements = await loadRequirementsFromGitHub();
+    console.log(`📊 Requirements loaded: ${requirements.length}`);
+    
+    if (requirements.length === 0) {
+      console.error('❌ NO REQUIREMENTS LOADED from GitHub!');
+      return { 
+        hasMatches: false, 
+        error: 'No requirements loaded from GitHub'
+      };
+    }
     
     // 3. Encontrar matches
+    console.log('🔍 Step 3: Finding matches...');
     const matches = findMatches(lineItems, requirements);
-    console.log('Matches found:', matches);
+    console.log(`📊 Matches found: ${matches.length}`);
     
     if (matches.length === 0) {
-      return { hasMatches: false };
+      console.log('❌ No matches found between line items and requirements');
+      return { 
+        hasMatches: false,
+        debug: {
+          lineItemsCount: lineItems.length,
+          requirementsCount: requirements.length,
+          lineItemsSKUs: lineItems.map(li => li.properties?.hs_product_id),
+          requirementsSKUs: requirements.map(r => r.sku)
+        }
+      };
     }
     
     // 4. Buscar propriedades do deal E seus metadados
+    console.log('🔍 Step 4: Getting deal properties...');
     const dealData = await getDealPropertiesWithMetadata(hs_object_id, matches);
     
+    console.log('✅ SUCCESS - returning matched products');
     return { 
       hasMatches: true, 
       matchedProducts: dealData 
     };
     
   } catch (error) {
-    console.error('Error in main function:', error);
-    return { hasMatches: false, error: error.message };
+    console.error('💥 FATAL ERROR in main function:', error);
+    return { 
+      hasMatches: false, 
+      error: error.message,
+      stack: error.stack 
+    };
   }
 };
 
-// Function to load requirements from ALL JSON files in requirements folder
-function loadRequirements() {
-  try {
-    const requirementsDir = path.join(__dirname, '../requirements');
-    console.log('Requirements directory:', requirementsDir);
-    
-    // Verificar se a pasta existe
-    if (!fs.existsSync(requirementsDir)) {
-      console.warn('Requirements directory does not exist:', requirementsDir);
-      return [];
-    }
-    
-    const files = fs.readdirSync(requirementsDir);
-    console.log('Files in requirements directory:', files);
-    
-    let allRequirements = [];
-    
-    // Carregar todos os arquivos .json
-    files.forEach(file => {
-      if (file.endsWith('.json')) {
-        console.log(`📄 Loading requirements from: ${file}`);
-        
-        try {
-          const filePath = path.join(requirementsDir, file);
-          const data = fs.readFileSync(filePath, 'utf8');
-          const fileRequirements = JSON.parse(data);
-          
-          // Adicionar ao array principal
-          if (Array.isArray(fileRequirements)) {
-            console.log(`   ✅ Loaded ${fileRequirements.length} requirements from ${file}`);
-            allRequirements.push(...fileRequirements);
-          } else {
-            console.warn(`   ⚠️ File ${file} is not an array, skipping`);
-          }
-        } catch (fileError) {
-          console.error(`   ❌ Error loading ${file}:`, fileError.message);
-        }
-      } else {
-        console.log(`   ⏭️ Skipping non-JSON file: ${file}`);
+// NOVA FUNÇÃO: Carregar requirements do GitHub via HTTP
+async function loadRequirementsFromGitHub() {
+  console.log('🌐 === LOADING REQUIREMENTS FROM GITHUB ===');
+  
+  // URLs dos seus arquivos JSON no GitHub (SUBSTITUA PELOS SEUS)
+  const githubUrls = [
+    'https://raw.githubusercontent.com/SEU_USUARIO/SEU_REPO/main/requirements/products.json',
+    // 'https://raw.githubusercontent.com/SEU_USUARIO/SEU_REPO/main/requirements/services.json',
+    // 'https://raw.githubusercontent.com/SEU_USUARIO/SEU_REPO/main/requirements/documents.json'
+  ];
+  
+  let allRequirements = [];
+  
+  for (const url of githubUrls) {
+    try {
+      console.log(`🔗 Fetching from: ${url}`);
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        console.error(`❌ HTTP Error ${response.status} for ${url}`);
+        continue;
       }
-    });
-    
-    console.log(`🎯 Total requirements loaded: ${allRequirements.length}`);
-    
-    // Log dos SKUs carregados para debug
-    const skus = allRequirements.map(req => req.sku);
-    console.log('📋 SKUs loaded:', skus);
-    
-    return allRequirements;
-    
-  } catch (error) {
-    console.error('❌ Error loading requirements:', error);
-    return [];
+      
+      const jsonText = await response.text();
+      console.log(`📊 Downloaded ${jsonText.length} characters from ${url}`);
+      
+      const fileRequirements = JSON.parse(jsonText);
+      
+      if (Array.isArray(fileRequirements)) {
+        console.log(`✅ Loaded ${fileRequirements.length} requirements from GitHub file`);
+        allRequirements.push(...fileRequirements);
+        
+        // Log dos primeiros itens para debug
+        fileRequirements.slice(0, 2).forEach((req, idx) => {
+          console.log(`   📋 Item ${idx + 1}:`, JSON.stringify(req));
+        });
+      } else {
+        console.warn(`⚠️ GitHub file is not an array, skipping. Type: ${typeof fileRequirements}`);
+      }
+      
+    } catch (fetchError) {
+      console.error(`💥 Error fetching from ${url}:`, fetchError.message);
+      // Não falhamos completamente, apenas logamos o erro
+    }
   }
+  
+  console.log(`🎯 Total requirements loaded from GitHub: ${allRequirements.length}`);
+  
+  // Log dos SKUs carregados
+  const skus = allRequirements.map(req => req.sku);
+  console.log('📋 GitHub SKUs loaded:', skus);
+  
+  return allRequirements;
 }
 
-// Function to find matches between line items and requirements - LÓGICA MELHORADA
+// Function to find matches between line items and requirements
 function findMatches(lineItems, requirements) {
   const matches = [];
   
-  console.log('🔍 Starting match process...');
-  console.log('🔍 Requirements SKUs available:', requirements.map(r => r.sku));
+  console.log('🔍 === STARTING MATCH PROCESS ===');
+  console.log('📊 Line items to process:', lineItems.length);
+  console.log('📊 Requirements available:', requirements.length);
+  
+  console.log('📋 Available requirement SKUs:', requirements.map(r => r.sku));
   
   for (const lineItem of lineItems) {
     const lineItemSku = lineItem.properties?.hs_product_id;
-    console.log(`🔍 Checking line item SKU: "${lineItemSku}"`);
+    console.log(`🔍 Processing line item SKU: "${lineItemSku}"`);
     
     if (lineItemSku) {
-      let matchedRequirement = null;
+      // Match direto pelo SKU
+      let matchedRequirement = requirements.find(req => req.sku === lineItemSku);
       
-      // TENTATIVA 1: Match exato
-      matchedRequirement = requirements.find(req => req.sku === lineItemSku);
       if (matchedRequirement) {
         console.log(`✅ EXACT MATCH found: "${lineItemSku}" = "${matchedRequirement.sku}"`);
-      } else {
-        console.log(`❌ No exact match for: "${lineItemSku}"`);
-        
-        // TENTATIVA 2: Line item sem prefixo, requirement com prefixo
-        const lineItemWithPrefixes = [
-          `DOCU-GRAL-${lineItemSku}`,
-          `DOCU-EDUC-${lineItemSku}`,
-          `SERV-${lineItemSku}`,
-          `CONS-${lineItemSku}`
-        ];
-        
-        for (const prefixedSku of lineItemWithPrefixes) {
-          matchedRequirement = requirements.find(req => req.sku === prefixedSku);
-          if (matchedRequirement) {
-            console.log(`✅ PREFIX MATCH found: "${lineItemSku}" -> "${matchedRequirement.sku}"`);
-            break;
-          }
-        }
-        
-        // TENTATIVA 3: Requirement sem prefixo, line item com prefixo  
-        if (!matchedRequirement) {
-          // Extrair apenas o número do line item
-          const lineItemNumber = lineItemSku.replace(/^[A-Z-]+/, '');
-          
-          matchedRequirement = requirements.find(req => {
-            const reqNumber = req.sku.replace(/^[A-Z-]+/, '');
-            return reqNumber === lineItemNumber;
-          });
-          
-          if (matchedRequirement) {
-            console.log(`✅ NUMBER MATCH found: "${lineItemSku}" -> "${matchedRequirement.sku}"`);
-          }
-        }
-        
-        // TENTATIVA 4: Match flexível (contém)
-        if (!matchedRequirement) {
-          matchedRequirement = requirements.find(req => 
-            req.sku.includes(lineItemSku) || lineItemSku.includes(req.sku)
-          );
-          
-          if (matchedRequirement) {
-            console.log(`✅ FLEXIBLE MATCH found: "${lineItemSku}" <-> "${matchedRequirement.sku}"`);
-          }
-        }
-      }
-      
-      if (matchedRequirement) {
         matches.push({
           lineItem: lineItem,
           requirement: matchedRequirement,
           productName: lineItem.properties?.name || 'Produto sem nome'
         });
+        console.log(`✅ MATCH ADDED: ${lineItem.properties?.name}`);
       } else {
         console.log(`❌ NO MATCH FOUND for line item SKU: "${lineItemSku}"`);
       }
@@ -174,7 +155,8 @@ function findMatches(lineItems, requirements) {
     }
   }
   
-  console.log(`🎯 Total matches found: ${matches.length}`);
+  console.log(`🎯 === MATCH PROCESS COMPLETE ===`);
+  console.log(`📊 Total matches found: ${matches.length}`);
   return matches;
 }
 
@@ -185,6 +167,7 @@ async function getLineItems(dealId) {
   });
 
   try {
+    console.log('🔍 Fetching deal data for ID:', dealId);
     const dealData = await hubSpotClient.crm.deals.basicApi.getById(
       dealId,
       undefined,
@@ -194,7 +177,6 @@ async function getLineItems(dealId) {
     );
 
     if (!dealData.associations) {
-      console.log('No associations found in deal');
       return [];
     }
 
@@ -203,12 +185,11 @@ async function getLineItems(dealId) {
                               dealData.associations.line_items;
 
     if (!lineItemsAssociation || !lineItemsAssociation.results) {
-      console.log('No line items association found');
       return [];
     }
 
     const lineItemIds = lineItemsAssociation.results.map((item) => item.id);
-    console.log('Line item IDs found:', lineItemIds);
+    console.log('📋 Line item IDs found:', lineItemIds);
     
     if (lineItemIds.length === 0) {
       return [];
@@ -219,12 +200,11 @@ async function getLineItems(dealId) {
       properties: ['name', 'hs_product_id']
     });
 
-    console.log('Line items retrieved:', lineItems.results?.length || 0);
+    console.log('📊 Line items retrieved:', lineItems.results?.length || 0);
     
-    // Log detalhado dos line items
     if (lineItems.results) {
       lineItems.results.forEach((item, index) => {
-        console.log(`Line item ${index + 1}:`, {
+        console.log(`📋 Line item ${index + 1}:`, {
           id: item.id,
           name: item.properties?.name,
           hs_product_id: item.properties?.hs_product_id
@@ -235,7 +215,7 @@ async function getLineItems(dealId) {
     return lineItems.results || [];
 
   } catch (error) {
-    console.error('Error fetching line items:', error);
+    console.error('💥 Error fetching line items:', error);
     return [];
   }
 }
@@ -247,29 +227,24 @@ async function getDealPropertiesWithMetadata(dealId, matches) {
   });
 
   try {
-    // Coletar todas as propriedades necessárias
     const allProps = [];
     matches.forEach(match => {
       allProps.push(...match.requirement.propsDeal);
     });
     
-    // Remover duplicatas
     const uniqueProps = [...new Set(allProps)];
-    console.log('Fetching deal properties:', uniqueProps);
+    console.log('🔍 Fetching deal properties:', uniqueProps);
     
-    // 1. Buscar o deal com as propriedades
     const dealData = await hubSpotClient.crm.deals.basicApi.getById(
       dealId,
       uniqueProps
     );
     
-    // 2. Buscar metadados das propriedades
     const propertiesMetadata = {};
     for (const propName of uniqueProps) {
       try {
         const propData = await hubSpotClient.crm.properties.coreApi.getByName('deals', propName);
         
-        // INCLUIR O LABEL/DISPLAYNAME ORIGINAL DO HUBSPOT
         propertiesMetadata[propName] = {
           type: propData.type,
           fieldType: propData.fieldType,
@@ -281,11 +256,8 @@ async function getDealPropertiesWithMetadata(dealId, matches) {
           description: propData.description || ''
         };
         
-        console.log(`Property ${propName} label:`, propertiesMetadata[propName].label);
-        
       } catch (error) {
-        console.error(`Error fetching metadata for property ${propName}:`, error.message);
-        // Default metadata se não conseguir buscar
+        console.error(`💥 Error fetching metadata for property ${propName}:`, error.message);
         propertiesMetadata[propName] = {
           type: 'string',
           fieldType: 'text',
@@ -296,7 +268,6 @@ async function getDealPropertiesWithMetadata(dealId, matches) {
       }
     }
     
-    // 3. Montar resposta
     const result = matches.map(match => ({
       productName: match.productName,
       sku: match.requirement.sku,
@@ -307,11 +278,11 @@ async function getDealPropertiesWithMetadata(dealId, matches) {
       }))
     }));
     
-    console.log('Final result:', JSON.stringify(result, null, 2));
+    console.log('✅ Final result assembled successfully');
     return result;
     
   } catch (error) {
-    console.error('Error fetching deal properties:', error);
+    console.error('💥 Error fetching deal properties:', error);
     return [];
   }
 }
