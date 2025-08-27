@@ -14,7 +14,7 @@ exports.main = async (context = {}) => {
     const lineItems = await getLineItems(hs_object_id);
     console.log('Line items found:', lineItems.length);
     
-    // 2. Carregar requirements
+    // 2. Carregar requirements de TODOS os arquivos JSON
     const requirements = loadRequirements();
     console.log('Requirements loaded:', requirements.length);
     
@@ -40,38 +40,141 @@ exports.main = async (context = {}) => {
   }
 };
 
-// Function to load requirements from JSON file
+// Function to load requirements from ALL JSON files in requirements folder
 function loadRequirements() {
   try {
-    const requirementsPath = path.join(__dirname, '../requirements/products.json');
-    const data = fs.readFileSync(requirementsPath, 'utf8');
-    return JSON.parse(data);
+    const requirementsDir = path.join(__dirname, '../requirements');
+    console.log('Requirements directory:', requirementsDir);
+    
+    // Verificar se a pasta existe
+    if (!fs.existsSync(requirementsDir)) {
+      console.warn('Requirements directory does not exist:', requirementsDir);
+      return [];
+    }
+    
+    const files = fs.readdirSync(requirementsDir);
+    console.log('Files in requirements directory:', files);
+    
+    let allRequirements = [];
+    
+    // Carregar todos os arquivos .json
+    files.forEach(file => {
+      if (file.endsWith('.json')) {
+        console.log(`📄 Loading requirements from: ${file}`);
+        
+        try {
+          const filePath = path.join(requirementsDir, file);
+          const data = fs.readFileSync(filePath, 'utf8');
+          const fileRequirements = JSON.parse(data);
+          
+          // Adicionar ao array principal
+          if (Array.isArray(fileRequirements)) {
+            console.log(`   ✅ Loaded ${fileRequirements.length} requirements from ${file}`);
+            allRequirements.push(...fileRequirements);
+          } else {
+            console.warn(`   ⚠️ File ${file} is not an array, skipping`);
+          }
+        } catch (fileError) {
+          console.error(`   ❌ Error loading ${file}:`, fileError.message);
+        }
+      } else {
+        console.log(`   ⏭️ Skipping non-JSON file: ${file}`);
+      }
+    });
+    
+    console.log(`🎯 Total requirements loaded: ${allRequirements.length}`);
+    
+    // Log dos SKUs carregados para debug
+    const skus = allRequirements.map(req => req.sku);
+    console.log('📋 SKUs loaded:', skus);
+    
+    return allRequirements;
+    
   } catch (error) {
-    console.error('Error loading requirements:', error);
+    console.error('❌ Error loading requirements:', error);
     return [];
   }
 }
 
-// Function to find matches between line items and requirements
+// Function to find matches between line items and requirements - LÓGICA MELHORADA
 function findMatches(lineItems, requirements) {
   const matches = [];
   
+  console.log('🔍 Starting match process...');
+  console.log('🔍 Requirements SKUs available:', requirements.map(r => r.sku));
+  
   for (const lineItem of lineItems) {
     const lineItemSku = lineItem.properties?.hs_product_id;
-    console.log('Checking line item SKU:', lineItemSku);
+    console.log(`🔍 Checking line item SKU: "${lineItemSku}"`);
     
     if (lineItemSku) {
-      const requirement = requirements.find(req => req.sku === lineItemSku);
-      if (requirement) {
+      let matchedRequirement = null;
+      
+      // TENTATIVA 1: Match exato
+      matchedRequirement = requirements.find(req => req.sku === lineItemSku);
+      if (matchedRequirement) {
+        console.log(`✅ EXACT MATCH found: "${lineItemSku}" = "${matchedRequirement.sku}"`);
+      } else {
+        console.log(`❌ No exact match for: "${lineItemSku}"`);
+        
+        // TENTATIVA 2: Line item sem prefixo, requirement com prefixo
+        const lineItemWithPrefixes = [
+          `DOCU-GRAL-${lineItemSku}`,
+          `DOCU-EDUC-${lineItemSku}`,
+          `SERV-${lineItemSku}`,
+          `CONS-${lineItemSku}`
+        ];
+        
+        for (const prefixedSku of lineItemWithPrefixes) {
+          matchedRequirement = requirements.find(req => req.sku === prefixedSku);
+          if (matchedRequirement) {
+            console.log(`✅ PREFIX MATCH found: "${lineItemSku}" -> "${matchedRequirement.sku}"`);
+            break;
+          }
+        }
+        
+        // TENTATIVA 3: Requirement sem prefixo, line item com prefixo  
+        if (!matchedRequirement) {
+          // Extrair apenas o número do line item
+          const lineItemNumber = lineItemSku.replace(/^[A-Z-]+/, '');
+          
+          matchedRequirement = requirements.find(req => {
+            const reqNumber = req.sku.replace(/^[A-Z-]+/, '');
+            return reqNumber === lineItemNumber;
+          });
+          
+          if (matchedRequirement) {
+            console.log(`✅ NUMBER MATCH found: "${lineItemSku}" -> "${matchedRequirement.sku}"`);
+          }
+        }
+        
+        // TENTATIVA 4: Match flexível (contém)
+        if (!matchedRequirement) {
+          matchedRequirement = requirements.find(req => 
+            req.sku.includes(lineItemSku) || lineItemSku.includes(req.sku)
+          );
+          
+          if (matchedRequirement) {
+            console.log(`✅ FLEXIBLE MATCH found: "${lineItemSku}" <-> "${matchedRequirement.sku}"`);
+          }
+        }
+      }
+      
+      if (matchedRequirement) {
         matches.push({
           lineItem: lineItem,
-          requirement: requirement,
+          requirement: matchedRequirement,
           productName: lineItem.properties?.name || 'Produto sem nome'
         });
+      } else {
+        console.log(`❌ NO MATCH FOUND for line item SKU: "${lineItemSku}"`);
       }
+    } else {
+      console.log('⚠️ Line item has no hs_product_id');
     }
   }
   
+  console.log(`🎯 Total matches found: ${matches.length}`);
   return matches;
 }
 
@@ -91,6 +194,7 @@ async function getLineItems(dealId) {
     );
 
     if (!dealData.associations) {
+      console.log('No associations found in deal');
       return [];
     }
 
@@ -99,10 +203,12 @@ async function getLineItems(dealId) {
                               dealData.associations.line_items;
 
     if (!lineItemsAssociation || !lineItemsAssociation.results) {
+      console.log('No line items association found');
       return [];
     }
 
     const lineItemIds = lineItemsAssociation.results.map((item) => item.id);
+    console.log('Line item IDs found:', lineItemIds);
     
     if (lineItemIds.length === 0) {
       return [];
@@ -112,6 +218,19 @@ async function getLineItems(dealId) {
       inputs: lineItemIds.map((id) => ({ id })),
       properties: ['name', 'hs_product_id']
     });
+
+    console.log('Line items retrieved:', lineItems.results?.length || 0);
+    
+    // Log detalhado dos line items
+    if (lineItems.results) {
+      lineItems.results.forEach((item, index) => {
+        console.log(`Line item ${index + 1}:`, {
+          id: item.id,
+          name: item.properties?.name,
+          hs_product_id: item.properties?.hs_product_id
+        });
+      });
+    }
 
     return lineItems.results || [];
 
@@ -158,7 +277,7 @@ async function getDealPropertiesWithMetadata(dealId, matches) {
             label: option.label || option.displayName || option.value,
             value: option.value
           })) : [],
-          label: propData.label || propData.displayName || propName, // LABEL ORIGINAL!
+          label: propData.label || propData.displayName || propName,
           description: propData.description || ''
         };
         
@@ -176,8 +295,6 @@ async function getDealPropertiesWithMetadata(dealId, matches) {
         };
       }
     }
-    
-    console.log('Properties metadata summary:', JSON.stringify(propertiesMetadata, null, 2));
     
     // 3. Montar resposta
     const result = matches.map(match => ({
