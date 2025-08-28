@@ -1,6 +1,28 @@
 [
   [
     {
+      "sku": "CONS-FISC-24665292896",
+      "propsDeal": ["quais_sao_as_duvidas_do_cliente_"]
+    },
+    {
+      "sku": "CONS-EDUC-24664410983",
+      "propsDeal": ["qual_curso_o_cliente_tem_interesse_"]
+    },
+    {
+      "sku": "CONS-IMIG-24672377253",
+      "propsDeal": [
+        "qual_o_tipo_de_tipo_visto_que_o_cliente_tem_interesse___nomade__nao_lucrativa__empreendedor__trabal"
+      ]
+    }
+  ],
+  [
+    {
+      "sku": "CURS-CURS-00001469",
+      "propsDeal": ["em_qual_curso_o_cliente_tem_interesse_"]
+    }
+  ],
+  [
+    {
       "sku": "DOCU-GRAL-24692090982",
       "propsDeal": ["de_qual_pais_e_o_antecedente_penal_"]
     },
@@ -34,18 +56,38 @@
   ],
   [
     {
-      "sku": "CONS-FISC-24665292896",
-      "propsDeal": ["quais_sao_as_duvidas_do_cliente_"]
+      "sku": "IMIG-ARRA-24662087748",
+      "propsDeal": ["tipo_de_arraigo"]
     },
     {
-      "sku": "CONS-EDUC-24664410983",
-      "propsDeal": ["qual_curso_o_cliente_tem_interesse_"]
+      "sku": "IMIG-DOCU-24666841627",
+      "propsDeal": ["data_de_vencimento_do_nie"]
     },
     {
-      "sku": "CONS-IMIG-24672377253",
+      "sku": "IMIG-DOCU-24690226989",
+      "propsDeal": ["data_de_vencimento_tie_dni"]
+    },
+    {
+      "sku": "IMIG-FAMI-24665292897",
+      "propsDeal": ["qual_o_vinculo_com_o_espanhol_"]
+    },
+    {
+      "sku": "IMIG-VIST-24657744697",
       "propsDeal": [
-        "qual_o_tipo_de_tipo_visto_que_o_cliente_tem_interesse___nomade__nao_lucrativa__empreendedor__trabal"
+        "em_qual_pais_esta_o_interessado_",
+        "se_esta_na_espanha__ha_quanto_tempo_",
+        "ja_contratou_o_curso_"
       ]
+    },
+    {
+      "sku": "IMIG-VIST-24668969755",
+      "propsDeal": ["qual_visto_"]
+    }
+  ],
+  [
+    {
+      "sku": "JUR-GRAL-24660260675",
+      "propsDeal": ["em_qual_pais_sera_feita_a_homologacao_"]
     }
   ]
 ]
