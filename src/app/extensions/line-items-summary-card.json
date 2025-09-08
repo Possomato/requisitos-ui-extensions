@@ -1,7 +1,7 @@
 {
   "type": "crm-card",
   "data": {
-    "title": "Line Items Summary Card",
+    "title": "Requisitos para tramitação",
     "uid": "line_items_summary_card",
     "location": "crm.record.tab", 
     "module": {

@@ -1,6 +1,6 @@
 {
-  "name": "Line Items summary example app",
-  "description": "Line Items summary example app", 
+  "name": "Espanha Fácil",
+  "description": "Informações necessárias para o administrativo tramitar os serviços", 
   "uid": "line_items_summary_example_app",
   "scopes": [
     "crm.objects.deals.read",

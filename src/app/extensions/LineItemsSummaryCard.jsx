@@ -257,6 +257,25 @@ const RequirementsCard = () => {
       );
     }
 
+    // DETECÇÃO DE TEXTAREA - MÚLTIPLAS LINHAS
+    if (metadata?.fieldType === 'textarea' || 
+        metadata?.type === 'textarea' || 
+        metadata?.type === 'text_area') {
+      return (
+        <Input
+          name={name}
+          value={currentValue}
+          multiline
+          rows={6}
+          onInput={(text) => {
+            console.log(`TextArea field ${name} changed to:`, text);
+            handlePropertyChange(name, text);
+          }}
+          placeholder={metadata?.label || name}
+        />
+      );
+    }
+
     // DEFAULT PARA TEXT
     return (
       <Input
@@ -287,7 +306,7 @@ const RequirementsCard = () => {
     return (
       <Flex direction="column" gap="lg" align="center">
         <Text variant="microcopy" format={{ fontStyle: 'italic' }}>
-          Siga o playbook
+          Não há entrada de requisitos, siga o playbook acima
         </Text>
       </Flex>
     );
@@ -305,16 +324,32 @@ const RequirementsCard = () => {
           <Flex direction="column" gap="sm">
             {product.properties.map((prop, propIndex) => (
               <Flex key={propIndex} direction="column" gap="sm">
-                {/* LABEL DA PROPRIEDADE - USANDO O LABEL ORIGINAL DO HUBSPOT */}
-                <Text 
-                  variant="microcopy" 
-                  format={{ 
-                    fontWeight: 'medium',
-                    color: 'primary'
-                  }}
-                >
-                  {prop.metadata?.label || prop.name}
-                </Text>
+                {/* CONTAINER PARA LABEL E DESCRIÇÃO COM ESPAÇAMENTO REDUZIDO */}
+                <Flex direction="column" gap="xs">
+                  {/* LABEL DA PROPRIEDADE - TÍTULO MAIOR E BOLD */}
+                  <Text 
+                    format={{ 
+                      fontWeight: 'bold',
+                      fontSize: 'default'
+                    }}
+                  >
+                    {prop.metadata?.label || prop.name}
+                  </Text>
+                  
+                  {/* DESCRIÇÃO DA PROPRIEDADE - ESPAÇAMENTO REDUZIDO */}
+                  {prop.metadata?.description && (
+                    <Text 
+                      variant="microcopy" 
+                      format={{ 
+                        fontSize: 'small',
+                        fontStyle: 'italic',
+                        color: 'secondary'
+                      }}
+                    >
+                      {prop.metadata.description}
+                    </Text>
+                  )}
+                </Flex>
                 
                 {/* CAMPO INTERATIVO */}
                 {renderPropertyField(prop)}

@@ -70,7 +70,7 @@ async function loadRequirementsFromGitHub() {
 
   // URL única que retorna um array de arrays de requirements
   const url =
-    "https://raw.githubusercontent.com/Possomato/requisitos-ui-extensions/refs/heads/main/src/app/requirements/requisitos.json";
+    "https://raw.githubusercontent.com/EspanhaFacil/requisitos-json/refs/heads/main/requisitos.json";
 
   try {
     console.log(`🔗 Fetching from: ${url}`);
